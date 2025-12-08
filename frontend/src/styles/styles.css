@@ -1,0 +1,277 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f0f0f0;
+}
+
+.userprofile-container {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.card {
+  background: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  margin-bottom: 2rem;
+}
+
+.card-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  background: #f0f2f5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  color: #555;
+  flex-shrink: 0;
+}
+
+.section {
+  margin-top: 1.5rem;
+}
+
+.section label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #444;
+}
+
+.profile-input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+  background: #fff;
+}
+
+.select-input {
+  width: 250px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+  background: #fff;
+}
+
+.switch-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.switch-container:last-child {
+  border-bottom: none;
+}
+
+.switch-info strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.switch-info small {
+  color: #777;
+}
+
+.switch {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background-color: #0b57d0;
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
+.zone-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.zone-item {
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #eee;
+  font-weight: 500;
+}
+
+.zone-button {
+  background: #e5e7eb;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #374151;
+  transition: background 0.2s;
+}
+
+.zone-button:hover {
+  background: #d1d5db;
+}
+
+.save-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
+.btn-primary {
+  background: #000;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.btn-secondary {
+  background: white;
+  border: 1px solid #ddd;
+  color: #333;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .userprofile-container {
+    max-width: 95%;
+    padding: 1.5rem;
+  }
+  .card {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .userprofile-container {
+    padding: 1rem;
+    width: 100%;
+    padding-top: 80px;
+  }
+  .card {
+    padding: 1.2rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .card-title {
+    text-align: center;
+  }
+  .profile-header {
+    gap: 1rem;
+    flex-direction: column;
+    text-align: center;
+  }
+  .profile-avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 28px;
+    margin: 0 auto;
+  }
+  .profile-header h3 {
+    margin: 0 0 4px 0;
+    font-size: 1.1rem;
+  }
+  .profile-header p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+  .select-input {
+    width: 100%;
+  }
+  .zone-item {
+    font-size: 0.95rem;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .zone-button {
+    width: 100%;
+    text-align: center;
+  }
+  .save-buttons {
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 2rem;
+  }
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    padding: 14px;
+    text-align: center;
+  }
+  .btn-secondary {
+    background: #f9f9f9;
+    border-color: #ccc;
+  }
+}

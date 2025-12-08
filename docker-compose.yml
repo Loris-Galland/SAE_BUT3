@@ -1,0 +1,86 @@
+services:
+  nodered:
+    build: ./nodered  
+    container_name: nodered
+    ports:
+      - "1880:1880"
+    environment:
+      - TZ=Europe/Paris
+    depends_on:
+      - mysql
+      - mosquitto
+    volumes:
+      - ./nodered-data:/data  
+    networks:
+      - iotnet
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: nodered
+      MYSQL_USER: nodered
+      MYSQL_PASSWORD: noderedpassword
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d  
+    networks:
+      - iotnet
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    restart: always
+    ports:
+      - "1883:1883"   # MQTT
+      - "9001:9001"   # WebSocket(optionnel)
+    volumes:
+      - ./mosquitto-config:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
+      - ./mosquitto-logs:/mosquitto/log
+    networks:
+      - iotnet
+
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development #ou prod (on utilisera pas mais c'est une bonne pratique en entreprise)
+      - DB_HOST=mysql
+      - DB_USER=nodered
+      - DB_PASSWORD=noderedpassword
+      - DB_NAME=nodered
+      - MQTT_BROKER=mosquitto
+    depends_on:
+      - mysql
+      - mosquitto
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - iotnet
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - iotnet
+
+networks:
+  iotnet:
+
+volumes:
+  nodered_data:
+  mysql_data:
+  mosquitto_data:
+
