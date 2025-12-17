@@ -8,6 +8,11 @@ body {
   background: #f0f0f0;
 }
 
+.profile-subtitle {
+  color: #666;
+  margin-bottom: 20px;
+}
+
 .userprofile-container {
   width: 100%;
   max-width: 900px;
@@ -227,6 +232,11 @@ body {
   .card-title {
     text-align: center;
   }
+  
+  .profile-subtitle {
+    text-align: center;
+  }
+  
   .profile-header {
     gap: 1rem;
     flex-direction: column;

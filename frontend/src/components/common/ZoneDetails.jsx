@@ -2,15 +2,15 @@ import React, { useState, useEffect } from "react";
 import "../../styles/zonedetails.css";
 import HistoryChart from "../HistoryChart";
 
-export default function ZoneDetails({ zone, onToggleSubscription }) {
+export default function ZoneDetails({ zone, onToggleSubscription, isSensorMode }) {
     const [activeTab, setActiveTab] = useState("current");
-    const [dataSource, setDataSource] = useState("api");
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
     const [open, setOpen] = useState(false);
 
     useEffect(() => {
         if (zone) setOpen(true);
     }, [zone]);
+
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth <= 900);
         window.addEventListener("resize", handleResize);
@@ -42,56 +42,71 @@ export default function ZoneDetails({ zone, onToggleSubscription }) {
                     Historique
                 </button>
             </div>
+
             {activeTab === "current" ? (
                 <>
-                    <div className="zone-section" aria-label="choix-source-donnees">
-                        <h3>Choisir votre source de données</h3>
-                        <div className="source-select-responsive">
-                            <label className="source-label">
-                                <input
-                                    type="radio"
-                                    name="source"
-                                    value="api"
-                                    checked={dataSource === "api"}
-                                    onChange={() => setDataSource("api")}
-                                /> API
-                            </label>
-                            <label className="source-label">
-                                <input
-                                    type="radio"
-                                    name="source"
-                                    value="sensor"
-                                    checked={dataSource === "sensor"}
-                                    onChange={() => setDataSource("sensor")}
-                                /> Capteurs
-                            </label>
-                        </div>
-                    </div>
+                    {/* SECTION DONNÉES TEMPS RÉEL */}
                     <div className="zone-section">
-                        <h3>API/Capteurs en temps réel</h3>
+                        <h3>
+                            {isSensorMode ? "Données Capteurs (Direct)" : "Données Météo (API)"}
+                        </h3>
+
                         {zone.weather ? (
                             <>
-                                <div className="sensor-item"><span>Température</span><span>{zone.weather.temperature[0]}°C</span></div>
-                                <div className="sensor-item"><span>Humidité</span><span>{zone.weather.relativehumidity[0]}%</span></div>
-                                <div className="sensor-item"><span>Vitesse du vent</span><span>{zone.weather.windspeed[0]} km/h</span></div>
-                                <div className="sensor-item"><span>Probabilité de pluie</span><span>{zone.weather.precipitation_probability[0]}%</span></div>
+                                {/* 1. TEMPÉRATURE (Toujours visible) */}
+                                <div className="sensor-item">
+                                    <span>Température</span>
+                                    <span>{zone.weather.temperature[0]}°C</span>
+                                </div>
+
+                                {/* 2. HUMIDITÉ (Toujours visible) */}
+                                <div className="sensor-item">
+                                    <span>Humidité</span>
+                                    <span>{zone.weather.relativehumidity[0]}%</span>
+                                </div>
+
+                                {/* 3. BRANCHEMENT CONDITIONNEL */}
+                                {isSensorMode ? (
+                                    // >>> CAS CAPTEUR : On affiche GAZ (et on cache vent/pluie)
+                                    <div className="sensor-item" style={{ borderLeft: "3px solid #FF9800" }}>
+                                        <span>Gaz / Fumée</span>
+                                        {/* On affiche la valeur du gaz ou '--' si absent */}
+                                        <span>
+                                            {zone.weather.gaz !== undefined 
+                                                ? `${zone.weather.gaz[0]} ppm` 
+                                                : "-- ppm"}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    // >>> CAS API : On affiche VENT et PLUIE
+                                    <>
+                                        <div className="sensor-item">
+                                            <span>Vitesse du vent</span>
+                                            <span>{zone.weather.windspeed[0]} km/h</span>
+                                        </div>
+                                        <div className="sensor-item">
+                                            <span>Probabilité de pluie</span>
+                                            <span>{zone.weather.precipitation_probability[0]}%</span>
+                                        </div>
+                                    </>
+                                )}
                             </>
-                        ) : <p>Veuillez cliquer sur une zone pour afficher ses prévisions</p>}
+                        ) : (
+                            <p>Données non disponibles pour le moment.</p>
+                        )}
                     </div>
+
+                    {/* SECTION RISQUES */}
                     <div className="zone-section">
                         <h3>Tous les risques pour cette zone</h3>
                         {zone.risks ? (
                             Object.entries(zone.risks).map(([key, level]) => (
                                 <div key={key} className="risk-item" style={{ borderColor: getRiskColor(level) }}>
                                     <span>
-                                        {key === "fire"
-                                            ? "Incendie"
-                                            : key === "flood"
-                                            ? "Inondation"
-                                            : key === "ice"
-                                            ? "Verglas"
-                                            : key === "storm"
-                                            ? "Tempête"
+                                        {key === "incendie" || key === "fire" ? "Incendie"
+                                            : key === "flood" || key === "inondation" ? "Inondation"
+                                            : key === "ice" || key === "verglas" ? "Verglas"
+                                            : key === "storm" || key === "tempête" ? "Tempête"
                                             : key}
                                     </span>
                                     <span style={{ color: getRiskColor(level), fontWeight: "bold" }}>
@@ -101,6 +116,7 @@ export default function ZoneDetails({ zone, onToggleSubscription }) {
                             ))
                         ) : <p>Aucun risque enregistré</p>}
                     </div>
+
                     <div className="zone-section">
                         <h3>Prévisions à court terme</h3>
                         <p>{zone.forecast || "Cliquer sur une zone pour voir les prévisions"}</p>
@@ -116,6 +132,7 @@ export default function ZoneDetails({ zone, onToggleSubscription }) {
     ) : (
         <p style={{ padding: "20px" }}>Aucune zone sélectionnée</p>
     );
+
     return (
         <>
             <button

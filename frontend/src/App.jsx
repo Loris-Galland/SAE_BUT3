@@ -23,7 +23,21 @@ export default function App() {
     const [useDailyAPI, setUseDailyAPI] = useState(true);
     const [isSignedUp, setIsSignedUp] = useState(false);
     const [authView, setAuthView] = useState("signup");
-
+    const [user, setUser] = useState(null);
+    const handleLogout = () => {
+        setIsSignedUp(false);
+        setAuthView("login");
+        setUser(null);
+    };
+    const handleLogin = (userData) => {
+        console.log("Données reçues dans App:", userData);
+        setUser(userData);
+        setIsSignedUp(true);
+    };
+    const handleUserUpdate = (updatedUser) => {
+        console.log("Mise à jour de l'utilisateur global :", updatedUser);
+        setUser(updatedUser);
+    };
     const getBackgroundForFilter = () => {
         switch (activeFilter) {
             case "Incendie": return "linear-gradient(135deg, #fff5ee 30%, #fdbc7bff 100%)";
@@ -53,7 +67,7 @@ export default function App() {
         return authView === "signup" ? (
             <SignupForm onSignup={() => setIsSignedUp(true)} onLoginClick={() => setAuthView("login")} />
         ) : (
-            <LoginForm onLogin={() => setIsSignedUp(true)} onSignupClick={() => setAuthView("signup")} />
+            <LoginForm onLogin={handleLogin} onSignupClick={() => setAuthView("signup")} />
         );
     }
     return (
@@ -89,8 +103,13 @@ export default function App() {
                     </div>
                 )}
                 {activeView === "compare" && <CompareZones />}
-                {activeView === "profile" && <UserProfile />}
-                {activeView === "settings" && <Settings />}
+                {activeView === "profile" && (
+                    <UserProfile
+                        user={user}
+                        onUserUpdate={handleUserUpdate}
+                    />
+                )}
+                {activeView === "settings" && <Settings onLogout={handleLogout} />}
             </main>
         </div>
     );

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 
+const HARDCODED_USER_EMAIL = "saebut3@gmail.com"; 
+
 export default function Settings({ onClose }) {
   const [bugReportType, setBugReportType] = useState("bug");
   const [bugDescription, setBugDescription] = useState("");
@@ -8,35 +10,67 @@ export default function Settings({ onClose }) {
   const appVersion = "1.2.3";
   const buildDate = "20 octobre 2025";
   const serverStatus = "Connecté";
+
   useEffect(() => {
     const gradients = [
       "linear-gradient(45deg, #2E7D32, #4CAF50, #81C784, #C8E6C9)",
       "linear-gradient(45deg, #1B5E20, #388E3C, #66BB6A, #A5D6A7)",
       "linear-gradient(45deg, #33691E, #558B2F, #8BC34A, #DCEDC8)",
-      "linear-gradient(45deg, #004D40, #00796B, #26A69A, #80CBC4)"
+      "linear-gradient(45deg, #004D40, #00796B, #26A69A, #80CBC4)",
     ];
     const random = gradients[Math.floor(Math.random() * gradients.length)];
     setGradientColor(random);
   }, []);
-  const handleSubmitReport = () => {
+  const handleSubmitReport = async () => {
     if (!bugDescription.trim()) {
-      alert(`Veuillez décrire votre ${bugReportType === "bug" ? "bug" : "suggestion"}`);
+      alert(
+        `Veuillez décrire votre ${
+          bugReportType === "bug" ? "bug" : "suggestion"
+        }`
+      );
       return;
     }
+
     setIsSubmitting(true);
-    setTimeout(() => {
+
+    try {
+      const reportData = {
+        type: bugReportType,
+        description: bugDescription.trim(),
+        userEmail: HARDCODED_USER_EMAIL,
+      };
+
+      // Envoi au backend
+      const response = await fetch("http://localhost:3000/api/submit-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reportData),
+      });
+
+      if (!response.ok) throw new Error("Erreur serveur");
+
       alert(
         bugReportType === "bug"
-          ? "Rapport de bug envoyé !"
-          : "Suggestion envoyée !"
+          ? "Rapport envoyé ! (Voir logs serveur)"
+          : "Suggestion envoyée ! (Voir logs serveur)"
       );
       setBugDescription("");
+    } catch (error) {
+      console.error(error);
+      alert("Erreur lors de l'envoi au serveur.");
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
-  const handleLogout = () => {
-    alert("Déconnexion réussie !");
+
+  const handleLogoutClick = () => {
+    if (window.confirm("Voulez-vous vraiment vous déconnecter ?")) {
+        if (onLogout) {
+            onLogout();
+        }
+    }
   };
+
   const containerStyle = {
     padding: 20,
     maxWidth: 700,
@@ -45,10 +79,11 @@ export default function Settings({ onClose }) {
     borderRadius: 10,
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
     boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-    border: "6px solid", 
+    border: "6px solid",
     borderImage: `${gradientColor} 1`,
     transition: "border-image 0.5s ease-in-out",
   };
+
   const sectionStyle = {
     background: "#fff",
     padding: 15,
@@ -56,8 +91,15 @@ export default function Settings({ onClose }) {
     marginBottom: 20,
     boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
   };
+
   const labelStyle = { display: "block", marginBottom: 5 };
-  const inputStyle = { width: "100%", padding: 8, borderRadius: 5, border: "1px solid #ccc", marginBottom: 10 };
+  const inputStyle = {
+    width: "100%",
+    padding: 8,
+    borderRadius: 5,
+    border: "1px solid #ccc",
+    marginBottom: 10,
+  };
   const buttonStyle = {
     padding: "8px 16px",
     borderRadius: 5,
@@ -68,10 +110,12 @@ export default function Settings({ onClose }) {
     fontWeight: 500,
     marginTop: 5,
   };
+
   const dangerButtonStyle = {
     ...buttonStyle,
     backgroundColor: "#dc2626",
   };
+
   return (
     <div style={containerStyle}>
       <h2 style={{ marginBottom: 10, fontWeight: "normal" }}>Paramètres</h2>
@@ -90,11 +134,14 @@ export default function Settings({ onClose }) {
       </div>
       <div style={sectionStyle}>
         <h3 style={{ fontWeight: "normal" }}>Rapport / Suggestions</h3>
+        <p style={{ fontSize: 12, color: "#555", marginBottom: 10 }}>
+          Envoi simulé avec l'adresse : <strong>{HARDCODED_USER_EMAIL}</strong>
+        </p>
         <label style={labelStyle}>
           Type de rapport:
           <select
             value={bugReportType}
-            onChange={e => setBugReportType(e.target.value)}
+            onChange={(e) => setBugReportType(e.target.value)}
             style={inputStyle}
           >
             <option value="bug">Signaler un bug</option>
@@ -105,7 +152,7 @@ export default function Settings({ onClose }) {
           Description:
           <textarea
             value={bugDescription}
-            onChange={e => setBugDescription(e.target.value)}
+            onChange={(e) => setBugDescription(e.target.value)}
             rows={5}
             style={inputStyle}
           />
@@ -121,15 +168,19 @@ export default function Settings({ onClose }) {
       <div style={sectionStyle}>
         <h3 style={{ fontWeight: "normal" }}>Déconnexion</h3>
         <p style={{ fontSize: 12, color: "#555", marginBottom: 10 }}>
-          Vous serez déconnecté de l'application. Vos préférences et abonnements seront sauvegardés.
+          Vous serez déconnecté de l'application. Vos préférences et abonnements
+          seront sauvegardés.
         </p>
-        <button onClick={handleLogout} style={dangerButtonStyle}>
+        <button onClick={handleLogoutClick} style={dangerButtonStyle}>
           Se déconnecter
         </button>
       </div>
       {onClose && (
         <div style={{ textAlign: "center", marginTop: 10 }}>
-          <button onClick={onClose} style={{ ...buttonStyle, backgroundColor: "#6b7280" }}>
+          <button
+            onClick={onClose}
+            style={{ ...buttonStyle, backgroundColor: "#6b7280" }}
+          >
             Retour
           </button>
         </div>

@@ -130,12 +130,13 @@
         "x": 760,
         "y": 560,
         "wires": [
-            [],
+            [
+                "f6913be09d186b79"
+            ],
             [
                 "a8979f8a772cd2cb",
                 "3f48e11f9ba3fb77",
-                "8017e38f85b783c6",
-                "f6913be09d186b79"
+                "8017e38f85b783c6"
             ]
         ]
     },
@@ -681,7 +682,7 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
-        "payload": "{\"temperature\":85,\"humidite\":75,\"gaz\":210,\"latitude\":45.5,\"longitude\":2.3,\"deviceId\":\"CapteurTest\"}",
+        "payload": "{\"temperature\":5,\"humidite\":95,\"gaz\":210,\"latitude\":45.5,\"longitude\":2.3,\"deviceId\":\"CapteurTest\"}",
         "payloadType": "json",
         "x": 310,
         "y": 440,
