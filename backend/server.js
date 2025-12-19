@@ -68,6 +68,14 @@ const userDB = mysql.createPool({
   }
 })();
 
+// Mapping zones vers sensorId
+const ZONE_TO_SENSOR = {
+  "Valbonne": "CapteurValbonne",
+  "Biot": "CapteurBiot",
+  "Sophia Antipolis": "ESP8266_Zone_B"
+};
+
+// Vérification du stockage des zones
 async function ensureStorage() {
   await fs.ensureFile(DATA_PATH);
   const exists = await fs.readJson(DATA_PATH).catch(() => null);
@@ -151,6 +159,7 @@ async function fetchAndStoreZone(zoneName) {
   }
 }
 
+// Obtention de l'historique hebdomadaire API, fonctionnel pour chaque zones
 app.get('/api/history/:zoneId', async (req, res) => {
   const { zoneId } = req.params;
   const days = parseInt(req.query.days || '7', 10);
@@ -172,6 +181,77 @@ app.get('/api/history/:zoneId', async (req, res) => {
     res.json(slice);
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Historique des capteurs pour une zone
+app.get('/api/sensor-history/:zoneId', async (req, res) => {
+  const { zoneId } = req.params;
+  const sensorId = ZONE_TO_SENSOR[zoneId];
+
+  if (!sensorId) {
+    return res.status(404).json({ error: 'Zone inconnue' });
+  }
+
+  try {
+    // Récupérer toutes les données du capteur
+    const [rows] = await db.query(`
+      SELECT 
+        DATE_FORMAT(received_at, '%d/%m') as date,
+        temperature,
+        humidite,
+        gaz,
+        received_at
+      FROM mqtt_messages
+      WHERE deviceId = ?
+      ORDER BY received_at DESC
+      LIMIT 100
+    `, [sensorId]);
+
+    // Grouper par jour et calculer les moyennes
+    const grouped = {};
+    rows.forEach(row => {
+      const dateKey = row.date;
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = {
+          temperatures: [],
+          humidites: [],
+          gaz: []
+        };
+      }
+      if (row.temperature != null) grouped[dateKey].temperatures.push(parseFloat(row.temperature));
+      if (row.humidite != null) grouped[dateKey].humidites.push(parseFloat(row.humidite));
+      if (row.gaz != null) grouped[dateKey].gaz.push(parseInt(row.gaz));
+    });
+
+    // Calculer les moyennes pour chaque jour
+    const result = Object.keys(grouped).map(dateKey => {
+      const dayData = grouped[dateKey];
+
+      const avgTemp = dayData.temperatures.length > 0
+          ? dayData.temperatures.reduce((a, b) => a + b, 0) / dayData.temperatures.length
+          : null;
+
+      const avgHumidite = dayData.humidites.length > 0
+          ? dayData.humidites.reduce((a, b) => a + b, 0) / dayData.humidites.length
+          : null;
+
+      const avgGaz = dayData.gaz.length > 0
+          ? dayData.gaz.reduce((a, b) => a + b, 0) / dayData.gaz.length
+          : null;
+
+      return {
+        date: dateKey,
+        temperature: avgTemp ? Math.round(avgTemp * 100) / 100 : null,
+        humidite: avgHumidite ? Math.round(avgHumidite * 100) / 100 : null,
+        gaz: avgGaz ? Math.round(avgGaz) : null
+      };
+    }).reverse(); // Pour avoir l'ordre chronologique
+
+    res.json(result);
+  } catch (err) {
+    console.error("Erreur /api/sensor-history :", err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -396,6 +476,225 @@ cron.schedule('5 0 * * *', async () => {
     } catch (err) {
       console.error('Cron fetch failed for', z, err.message);
     }
+  }
+});
+
+// Route pour gérer l'abonnement/désabonnement à une zone
+app.post('/api/users/:id/toggle-zone', async (req, res) => {
+  const userId = req.params.id;
+  const { zoneName } = req.body;
+
+  try {
+    const [rows] = await userDB.query("SELECT zones FROM users WHERE id = ?", [userId]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+    }
+
+    let currentZonesStr = rows[0].zones || "";
+    let zonesArray = currentZonesStr ? currentZonesStr.split(',') : [];
+
+    if (zonesArray.includes(zoneName)) {
+      zonesArray = zonesArray.filter(z => z !== zoneName);
+    } else {
+      zonesArray.push(zoneName);
+    }
+
+    const newZonesStr = zonesArray.join(',');
+    await userDB.query("UPDATE users SET zones = ? WHERE id = ?", [newZonesStr, userId]);
+
+    res.json({ success: true, newZones: zonesArray });
+
+  } catch (err) {
+    console.error("Erreur toggle-zone:", err);
+    res.status(500).json({ error: "Erreur serveur lors de la mise à jour des abonnements" });
+  }
+});
+
+let dbReady = false;
+
+// On attends la DB
+const waitForDB = async () => {
+  while (!dbReady) { 
+    try {
+      const connection = await mysql.createConnection({
+        host: process.env.DB_HOST || 'mysql',
+        user: process.env.DB_USER || 'nodered',
+        password: process.env.DB_PASSWORD || 'noderedpassword',
+        database: 'utilisateurs'
+      });
+      await connection.end();
+      dbReady = true; 
+      console.log("--> Backend connecté à la BDD !");
+    } catch (e) {
+      console.log("--> En attente de la BDD... (Nouvel essai dans 5s)");
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+};
+waitForDB();
+
+// Mapping des capteurs physiques
+const SENSOR_MAPPING = {
+  "Sophia Antipolis": "ESP8266_Zone_B"
+};
+
+// Fonction de calcul des risques
+function calculateRiskLevel(weatherData) {
+  const { temp, hum, wind, rain, gaz } = weatherData;
+  let risks = [];
+
+  // Incendie (Priorité Capteur Gaz)
+  if (gaz > 200) risks.push({ type: "Incendie", level: "Eleve", msg: "Detection de fumee critique !" });
+  else if (temp > 30 && hum < 30) risks.push({ type: "Incendie", level: "Eleve", msg: "Conditions canicule + secheresse" });
+
+  // Inondation
+  if (rain > 80) risks.push({ type: "Inondation", level: "Eleve", msg: "Fortes precipitations" });
+
+  // Verglas
+  if (temp <= 0) risks.push({ type: "Verglas", level: "Eleve", msg: "Temperatures negatives" });
+
+  // Tempete
+  if (wind > 90) risks.push({ type: "Tempete", level: "Eleve", msg: "Vents violents" });
+
+  return risks;
+}
+
+cron.schedule('*/10 * * * * *', async () => {
+
+  if (!dbReady) {
+    return; 
+  }
+  
+  console.log("Verification des risques (Capteurs & API)...");
+  
+  try {
+    const [users] = await userDB.query("SELECT * FROM users");
+    
+    // Récupérer les données capteurs (SQL)
+    const [sensors] = await db.query(`
+      SELECT deviceId, temperature, humidite, gaz 
+      FROM mqtt_messages 
+      WHERE received_at >= NOW() - INTERVAL 1 HOUR
+      ORDER BY received_at DESC
+    `);
+
+    // Récupérer les données API 
+    let apiStorage = {};
+    try {
+      apiStorage = await fs.readJson(DATA_PATH); 
+    } catch (e) {
+
+    }
+
+    for (const zoneName of Object.keys(ZONES)) {
+      let zoneData = null; // On va essayer de remplir ça
+      
+      //  Essayer le CAPTEUR 
+      const sensorId = SENSOR_MAPPING[zoneName];
+      const sensorReading = sensors.find(s => s.deviceId === sensorId);
+
+      if (sensorReading) {
+        zoneData = {
+          source: "Capteur",
+          temp: sensorReading.temperature,
+          hum: sensorReading.humidite,
+          gaz: sensorReading.gaz,
+          wind: 0, 
+          rain: 0
+        };
+      } 
+      
+      // Si pas de capteur, on test l'api
+      else if (apiStorage && apiStorage.zones && apiStorage.zones[zoneName]) {
+        const history = apiStorage.zones[zoneName];
+        if (history.length > 0) {
+          const lastEntry = history[history.length - 1];
+          if (lastEntry.snapshot) {
+             zoneData = {
+               source: "API",
+               temp: lastEntry.snapshot.temperature || 0,
+               hum: lastEntry.snapshot.humidity || 0,
+               wind: lastEntry.snapshot.windSpeed || 0,
+               rain: lastEntry.snapshot.precipProb || 0,
+               gaz: 0 
+             };
+          }
+        }
+      }
+
+      if (!zoneData) continue;
+
+      // Analyser les risques 
+      const detectedRisks = calculateRiskLevel(zoneData);
+
+      for (const risk of detectedRisks) {
+        for (const user of users) {
+          const userZones = user.zones ? user.zones.split(',') : [];
+          if (!userZones.includes(zoneName)) continue;
+
+          const userNotifs = user.notifications ? user.notifications.split(',') : [];
+
+          // Notification PUSH 
+          if (userNotifs.includes('push')) {
+              await userDB.query(
+                `INSERT INTO user_alerts (user_id, zone_name, risk_type, message, level) VALUES (?, ?, ?, ?, ?)`,
+                [user.id, zoneName, risk.type, risk.msg, risk.level]
+              );
+              console.log(`[ALERTE] Nouvelle notif (${zoneData.source}) pour ${user.username} : ${risk.type} à ${zoneName}`);
+          }
+
+          // Notification EMAIL 
+          if (userNotifs.includes('email')) {
+             const [existing] = await userDB.query(
+               `SELECT id FROM user_alerts WHERE user_id = ? AND zone_name = ? AND risk_type = ? AND created_at > NOW() - INTERVAL 1 HOUR`,
+               [user.id, zoneName, risk.type]
+             );
+
+             if (existing.length === 0) {
+               const mailer = nodemailer.createTransport({
+                 service: 'gmail',
+                 auth: { user: 'saebut3@gmail.com', pass: 'fkyo kwxd gcjz xqun' }
+               });
+
+               const mailOptions = {
+                 from: '"Alerte SAE IoT" saebut3@gmail.com',
+                 to: user.email,
+                 subject: `ALERTE ${risk.type.toUpperCase()} - ${zoneName}`,
+                 text: `Attention ${user.username},\n\nRisque détecté via ${zoneData.source} sur ${zoneName}.\nNature : ${risk.msg}.\n\nPrudence,\nL'équipe IoT.`
+               };
+
+               await mailer.sendMail(mailOptions); 
+               console.log(`[EMAIL] Simulé vers ${user.email}`);
+             }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Erreur Cron Alertes:", err);
+  }
+});
+
+// Routes API Alertes 
+app.get('/api/users/:id/alerts', async (req, res) => {
+  try {
+    const [rows] = await userDB.query(
+      "SELECT * FROM user_alerts WHERE user_id = ? AND is_read = False ORDER BY created_at DESC LIMIT 50", 
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur fetch alertes" });
+  }
+});
+
+app.put('/api/alerts/:alertId/read', async (req, res) => {
+  try {
+    await userDB.query("UPDATE user_alerts SET is_read = TRUE WHERE id = ?", [req.params.alertId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur update alerte" });
   }
 });
 

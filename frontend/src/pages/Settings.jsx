@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 
 const HARDCODED_USER_EMAIL = "saebut3@gmail.com"; 
 
-export default function Settings({ onClose }) {
+export default function Settings({ onClose, onLogout }) {
   const [bugReportType, setBugReportType] = useState("bug");
   const [bugDescription, setBugDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);

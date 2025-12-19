@@ -44,5 +44,14 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
+CREATE TABLE IF NOT EXISTS user_alerts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    zone_name VARCHAR(100),
+    risk_type VARCHAR(50),
+    message TEXT,
+    level VARCHAR(20),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 

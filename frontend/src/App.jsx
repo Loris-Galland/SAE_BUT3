@@ -7,19 +7,14 @@ import Settings from "./pages/Settings";
 import { AlertsPanel } from "./components/common/AlertsPanel";
 import SignupForm from "./components/common/SignupForm";
 import LoginForm from "./components/common/LoginForm";
+import UserStatistique from "./pages/UserStatistique"; 
 import "./styles/styles.css";
-
-const initialAlerts = [
-    { id: "1", zoneId: "valbonne", zoneName: "Valbonne", message: "Risque verglas", riskLevel: "high", timestamp: new Date(), read: false },
-    { id: "2", zoneId: "biot", zoneName: "Biot", message: "Risque inondation", riskLevel: "high", timestamp: new Date(), read: false },
-    { id: "3", zoneId: "Sophia Antipolis", zoneName: "Sophia Antipolis", message: "Risque tempête", riskLevel: "high", timestamp: new Date(), read: false },
-];
 
 export default function App() {
     const [activeView, setActiveView] = useState("map");
     const [activeFilter, setActiveFilter] = useState("Tous les risques");
     const [selectedRisk, setSelectedRisk] = useState(null);
-    const [alerts, setAlerts] = useState(initialAlerts);
+    const [alerts, setAlerts] = useState([]);
     const [useDailyAPI, setUseDailyAPI] = useState(true);
     const [isSignedUp, setIsSignedUp] = useState(false);
     const [authView, setAuthView] = useState("signup");
@@ -38,6 +33,45 @@ export default function App() {
         console.log("Mise à jour de l'utilisateur global :", updatedUser);
         setUser(updatedUser);
     };
+    
+    const handleSubscriptionChange = (newZones) => {
+    setUser(prev => ({ ...prev, zones: newZones }));
+    };
+
+    //  Récupération automatique des alertes 
+    React.useEffect(() => {
+        // Si l'utilisateur n'est pas connecté, on ne fait rien
+        if (!user) return;
+
+        const fetchAlerts = async () => {
+            try {
+                // Appel au backend pour récupérer les alertes de l'utilisateur connecté
+                const res = await fetch(`http://localhost:3000/api/users/${user.id}/alerts`);
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    // Formatage des données pour correspondre au composant AlertsPanel
+                    const formatted = data.map(a => ({
+                        id: a.id,
+                        zoneName: a.zone_name,
+                        message: `${a.risk_type}: ${a.message}`,
+                        riskLevel: (a.level === "Eleve" || a.level === "Élevé") ? "high" : "medium",
+                        timestamp: new Date(a.created_at),
+                        read: a.is_read === 1 
+                    }));
+                    setAlerts(formatted);
+                }
+            } catch (err) {
+                console.error("Erreur chargement alertes", err);
+            }
+        };
+
+        fetchAlerts();
+        
+        const interval = setInterval(fetchAlerts, 10000);
+        return () => clearInterval(interval);
+    }, [user]);
+
     const getBackgroundForFilter = () => {
         switch (activeFilter) {
             case "Incendie": return "linear-gradient(135deg, #fff5ee 30%, #fdbc7bff 100%)";
@@ -56,8 +90,13 @@ export default function App() {
             default: return "Vue générale";
         }
     };
-    const handleMarkAsRead = (alertId) => {
+    const handleMarkAsRead = async (alertId) => {
         setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, read: true } : a));
+        try {
+            await fetch(`http://localhost:3000/api/alerts/${alertId}/read`, { method: "PUT" });
+        } catch (e) { 
+            console.error("Erreur lors du marquage comme lu", e); 
+        }
     };
     const handleAlertClick = (zoneId) => {
         console.log("Alert clicked for zone:", zoneId);
@@ -96,13 +135,14 @@ export default function App() {
                         <h2 className="map-header-title" style={{ marginBottom: 16, fontSize: "18px" }}>
                             Carte interactive : {getTitleForFilter()}
                         </h2>
-                        <h3 style={{ fontSize: "12px" }}>Zones surveillées : 3 / Abonnements : 2</h3>
+                        <h3 style={{ fontSize: "12px" }}>Zones surveillées : 3 / Abonnements : {user?.zones?.length || 0}</h3>
                         <div style={{ height: 500, borderRadius: 8, overflow: "hidden" }}>
-                            <RiskMap selectedRisk={selectedRisk} useDailyAPI={useDailyAPI} />
+                            <RiskMap selectedRisk={selectedRisk} useDailyAPI={useDailyAPI} currentUser={user} onSubscriptionChange={handleSubscriptionChange} />
                         </div>
                     </div>
                 )}
                 {activeView === "compare" && <CompareZones />}
+                {activeView === "stats" && <UserStatistique />}
                 {activeView === "profile" && (
                     <UserProfile
                         user={user}

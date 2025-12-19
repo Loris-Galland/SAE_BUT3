@@ -5,7 +5,7 @@ import ZoneDetails from "../common/ZoneDetails";
 import "../../styles/zonedetails.css";
 import logoIUT from "../../assets/logo-iut.png";
 import logoRepublique from "../../assets/logo-republique.png";
-import { getWeather as getMeteoBlu } from "../../services/api";
+import { getWeather as getMeteoBlu, toggleZoneSubscription } from "../../services/api";
 import { getWeather as getOpenMeteo } from "../../services/apiDirect";
 
 // Configuration des zones initiales
@@ -82,7 +82,7 @@ const getForecastText = (risks) => {
     return "Conditions normales.";
 };
 
-export default function RiskMap({ selectedRisk, useDailyAPI }) {
+export default function RiskMap({ selectedRisk, useDailyAPI, currentUser, onSubscriptionChange }) {
     const [mapZones, setMapZones] = useState(initialZones);
     const [selectedZone, setSelectedZone] = useState(initialZones[0]);
     const [globalWeatherData, setGlobalWeatherData] = useState(null);
@@ -205,6 +205,16 @@ export default function RiskMap({ selectedRisk, useDailyAPI }) {
             if (updated) setSelectedZone(updated);
         }
     }, [mapZones]);
+
+    // Synchro des abonnements au chargement 
+    useEffect(() => {
+        if (currentUser && currentUser.zones) {
+            setMapZones(currentZones => currentZones.map(z => ({
+                ...z,
+                subscribed: currentUser.zones.includes(z.name)
+            })));
+        }
+    }, [currentUser]);
 
     // Init Leaflet
     useEffect(() => {
@@ -351,19 +361,35 @@ export default function RiskMap({ selectedRisk, useDailyAPI }) {
         });
     }, [selectedRisk, mapZones, useDailyAPI]);
 
-    const handleToggleSubscription = (zoneName) => {
-        setMapZones(prev => prev.map(z => 
-            z.name === zoneName ? { ...z, subscribed: !z.subscribed } : z
-        ));
+    const handleToggleSubscription = async (zoneName) => {
+        if (!currentUser) {
+            alert("Vous devez être connecté pour vous abonner aux alertes.");
+            return;
+        }
+
+        const result = await toggleZoneSubscription(currentUser.id, zoneName);
+
+        if (result && result.success) {
+            setMapZones(prev => prev.map(z => 
+                z.name === zoneName ? { ...z, subscribed: !z.subscribed } : z
+            ));
+
+            if (onSubscriptionChange) {
+                onSubscriptionChange(result.newZones);
+            }
+        } else {
+            alert("Erreur lors de l'enregistrement de l'abonnement.");
+        }
     };
 
 return (
         <div className="map-container">
             <div id="map" className="map"></div>
-            <ZoneDetails 
-                zone={selectedZone} 
+            <ZoneDetails
+                zone={selectedZone}
                 onToggleSubscription={() => handleToggleSubscription(selectedZone?.name)}
-                isSensorMode={useDailyAPI === null} 
+                isSensorMode={useDailyAPI === null}
+                useDailyAPI={useDailyAPI}
             />
         </div>
     );

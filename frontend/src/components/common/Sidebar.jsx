@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { MapIcon, GitCompare, User, Settings, Flame, Droplet, CloudSnow, Zap, Menu } from "lucide-react";
+import { MapIcon, GitCompare, User, Settings, Flame, Droplet, CloudSnow, Zap, Menu, BarChart3 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
+import logo from "../../assets/Physis_logo.png";
 
 const navItems = [
   { id: "map", label: "Carte", icon: MapIcon },
   { id: "compare", label: "Comparer", icon: GitCompare },
+  { id: "stats", label: "Utilisateurs", icon: BarChart3 },
   { id: "profile", label: "Profil", icon: User },
   { id: "settings", label: "Paramètres", icon: Settings },
 ];
@@ -91,13 +93,34 @@ export function Sidebar({
           left: isMobile ? (open ? 0 : "-280px") : 0,
           top: 0,
           transition: "left 0.3s ease",
-          zIndex: 2000
+          zIndex: 2000,
+          overflowY: "auto"
         }}
       >
-        <div style={{ marginBottom: "16px", fontWeight: "bold", fontSize: "18px" }}>
-          Application projet IOT 2025
+        <div style={{
+            marginBottom: "16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            paddingBottom: "16px",
+            borderBottom: "1px solid #e5e5e5",
+            marginTop: isMobile ? "50px" : "0",
+            transition: "margin 0.3s ease"
+        }}>
+          <img
+            src={logo}
+            alt="Logo Physis"
+            style={{
+                height: "40px",
+                width: "auto",
+                objectFit: "contain"
+            }}
+          />
+          <div style={{ fontWeight: "bold", fontSize: "16px", lineHeight: "1.2" }}>
+             Projet IOT 2025
+          </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "-15px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "-5px" }}>
           {navItems.map(({ id, label, icon: Icon }) => (
             <Button
               key={id}
@@ -166,7 +189,7 @@ export function Sidebar({
           })}
         </div>
         {activeView === "map" && (
-          <div style={{ flex: 1, marginTop: "-30px" }}>
+          <div style={{ flex: 1, marginTop: "-10px" }}>
             <p style={{ marginBottom: "8px", fontWeight: "bold" }}>Filtrer par type de risque :</p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {filters.map(({ label, icon: IconComp }) => (

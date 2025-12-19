@@ -26,6 +26,19 @@
           "windSpeed": 3.19,
           "precipProb": 0
         }
+      },
+      {
+        "date": "2025-12-18",
+        "temperature": 12.76,
+        "relativehumidity": 77.75,
+        "windspeed": 2.25,
+        "precipitation_probability": 0,
+        "snapshot": {
+          "temperature": 11.68,
+          "humidity": 83,
+          "windSpeed": 1.85,
+          "precipProb": 0
+        }
       }
     ],
     "Biot": [
@@ -54,6 +67,19 @@
           "windSpeed": 3.19,
           "precipProb": 0
         }
+      },
+      {
+        "date": "2025-12-18",
+        "temperature": 11.72,
+        "relativehumidity": 83.5,
+        "windspeed": 2.25,
+        "precipitation_probability": 0,
+        "snapshot": {
+          "temperature": 10.97,
+          "humidity": 87,
+          "windSpeed": 1.85,
+          "precipProb": 0
+        }
       }
     ],
     "Sophia Antipolis": [
@@ -80,6 +106,19 @@
           "temperature": 9.8,
           "humidity": 32,
           "windSpeed": 3.19,
+          "precipProb": 0
+        }
+      },
+      {
+        "date": "2025-12-18",
+        "temperature": 12.76,
+        "relativehumidity": 77.75,
+        "windspeed": 2.25,
+        "precipitation_probability": 0,
+        "snapshot": {
+          "temperature": 11.68,
+          "humidity": 83,
+          "windSpeed": 1.85,
           "precipProb": 0
         }
       }
